@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { timelineService } from '../services/timelineService';
 import { branchService } from '../services/branchService';
-import { GitCompare, AlertTriangle, Layers, ArrowLeft, RefreshCw, BarChart2, CheckCircle, ShieldAlert, Cpu, Sparkles } from 'lucide-react';
+import {
+  GitCompare, AlertTriangle, Layers, ArrowLeft, RefreshCw, BarChart2,
+  CheckCircle, ShieldAlert, Cpu, Sparkles, Clock, ArrowRight, Target,
+  TrendingUp, Shield, Zap, Brain
+} from 'lucide-react';
 import TerminalLoader from '../components/TerminalLoader';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -19,6 +23,9 @@ export default function ScenarioComparison() {
   const [loading, setLoading] = useState(true);
   const [fetchingComparison, setFetchingComparison] = useState(false);
   const [error, setError] = useState(null);
+
+  // Expandable report state — which card is expanded
+  const [expandedCard, setExpandedCard] = useState(null);
 
   // Initial load
   useEffect(() => {
@@ -54,6 +61,7 @@ export default function ScenarioComparison() {
     setSelectedTimelineId(id);
     setLoading(true);
     setComparisonResults(null);
+    setExpandedCard(null);
     try {
       const detail = await timelineService.getDetail(id);
       const tlBranches = detail.branches || [
@@ -80,6 +88,7 @@ export default function ScenarioComparison() {
     if (selectedBranchIds.length === 0) return;
     setFetchingComparison(true);
     setError(null);
+    setExpandedCard(null);
     try {
       const response = await branchService.compare({
         timeline_id: selectedTimelineId,
@@ -98,13 +107,22 @@ export default function ScenarioComparison() {
         return {
           id: res.branch_id,
           branch_name: res.branch_name || found?.branch_name || `Vector_${index}`,
+          branch_type: res.branch_type || null,
           decision: found?.decision_trigger || found?.decision || 'Baseline operational parameters',
           scarcity: (1.0 + index * 0.45).toFixed(2),
           elasticity: (0.85 - index * 0.15).toFixed(2),
           divergence: ((res.divergence_score || 0.00) * 100).toFixed(1),
           riskScore: parseFloat(risk),
           confidenceScore: parseFloat(confidence),
-          summary: narrative
+          summary: narrative,
+          // Full report fields
+          future_outlook: res.future_outlook || null,
+          risk_analysis: res.risk_analysis || null,
+          opportunity_analysis: res.opportunity_analysis || null,
+          timeline_stability: res.timeline_stability || null,
+          divergence_reason: res.divergence_reason || null,
+          strategic_outlook: res.strategic_outlook || null,
+          event_evolution: res.event_evolution || [],
         };
       });
       setComparisonResults(mapped);
@@ -115,6 +133,7 @@ export default function ScenarioComparison() {
         return {
           id,
           branch_name: found?.branch_name || `Vector_${index}`,
+          branch_type: null,
           decision: found?.decision_trigger || found?.decision || 'Delta parameters',
           scarcity: (1.0 + index * 0.45).toFixed(2),
           elasticity: (0.85 - index * 0.15).toFixed(2),
@@ -123,7 +142,14 @@ export default function ScenarioComparison() {
           confidenceScore: 0.92 - index * 0.08,
           summary: index === 0 
             ? "Baseline system operations are completely stable with nominal divergence." 
-            : "Warning: divergence patterns detected. Alternate timeline variance has introduced risk elements to primary subgrid sectors."
+            : "Warning: divergence patterns detected. Alternate timeline variance has introduced risk elements to primary subgrid sectors.",
+          future_outlook: null,
+          risk_analysis: null,
+          opportunity_analysis: null,
+          timeline_stability: null,
+          divergence_reason: null,
+          strategic_outlook: null,
+          event_evolution: [],
         };
       });
       setComparisonResults(constructed);
@@ -137,6 +163,10 @@ export default function ScenarioComparison() {
       triggerComparison();
     }
   }, [selectedTimelineId, selectedBranchIds]);
+
+  // Helper: check if a result has full report data
+  const hasFullReport = (res) =>
+    res.event_evolution?.length > 0 || res.risk_analysis || res.strategic_outlook;
 
   if (loading) {
     return <TerminalLoader />;
@@ -289,6 +319,17 @@ export default function ScenarioComparison() {
                   };
 
                   const risk = getRiskDetails(res.riskScore || 0.5);
+                  const isExpanded = expandedCard === res.id;
+                  const reportAvailable = hasFullReport(res);
+
+                  // Branch type badge label
+                  const getTypeBadge = (type) => {
+                    if (type === 'stable_growth') return { label: 'STABLE', cls: 'bg-cyber-cyan/10 text-cyber-cyan border-cyber-cyan/30' };
+                    if (type === 'high_risk_growth') return { label: 'HIGH RISK', cls: 'bg-cyber-gold/10 text-cyber-gold border-cyber-gold/30' };
+                    if (type === 'systemic_collapse') return { label: 'COLLAPSE', cls: 'bg-cyber-crimson/10 text-cyber-crimson border-cyber-crimson/30' };
+                    return null;
+                  };
+                  const badge = getTypeBadge(res.branch_type);
 
                   return (
                     <motion.div
@@ -317,9 +358,16 @@ export default function ScenarioComparison() {
                           <h4 className="text-xs font-bold text-white uppercase">{res.branch_name}</h4>
                           <span className="text-[9px] text-slate-550 select-all font-mono mt-0.5 block">{res.id}</span>
                         </div>
-                        <span className="text-[9px] font-bold text-cyber-cyan px-2 py-0.5 rounded-sm bg-cyber-cyan-glow border border-cyber-cyan/10 uppercase">
-                          SCENARIO #{index + 1}
-                        </span>
+                        <div className="flex items-center space-x-1.5">
+                          {badge && (
+                            <span className={`text-[7px] font-bold tracking-widest px-1.5 py-0.5 rounded border ${badge.cls}`}>
+                              {badge.label}
+                            </span>
+                          )}
+                          <span className="text-[9px] font-bold text-cyber-cyan px-2 py-0.5 rounded-sm bg-cyber-cyan-glow border border-cyber-cyan/10 uppercase">
+                            SCENARIO #{index + 1}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="space-y-4">
@@ -416,7 +464,162 @@ export default function ScenarioComparison() {
                             <p className="whitespace-pre-wrap leading-normal">{res.summary}</p>
                           </div>
                         </div>
+
+                        {/* Expand/Collapse Full Report Toggle */}
+                        {reportAvailable && (
+                          <button
+                            onClick={() => setExpandedCard(isExpanded ? null : res.id)}
+                            className="w-full py-2 bg-cyber-magenta/8 border border-cyber-magenta/25 text-cyber-magenta hover:bg-cyber-magenta/15 font-bold uppercase rounded transition-all flex items-center justify-center space-x-2 cursor-pointer text-[9px] tracking-widest"
+                          >
+                            <Brain className="w-3 h-3" />
+                            <span>{isExpanded ? 'COLLAPSE REPORT' : 'EXPAND FULL TIMELINE REPORT'}</span>
+                          </button>
+                        )}
                       </div>
+
+                      {/* Expandable Full Report Section */}
+                      <AnimatePresence>
+                        {isExpanded && reportAvailable && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.35, ease: 'easeInOut' }}
+                            className="overflow-hidden space-y-3 pt-2 border-t border-obsidian-border/30"
+                          >
+                            {/* Event Evolution Timeline */}
+                            {res.event_evolution && res.event_evolution.length > 0 && (
+                              <div className="bg-obsidian-950/60 border border-obsidian-border/30 rounded p-3.5">
+                                <div className="flex items-center space-x-1.5 mb-3">
+                                  <Clock className="w-3 h-3 text-cyber-gold" />
+                                  <span className="text-[8px] text-slate-500 uppercase tracking-widest font-bold">Event Evolution</span>
+                                </div>
+                                <div className="relative pl-4">
+                                  <div className="absolute left-[5px] top-1 bottom-1 w-px bg-gradient-to-b from-cyber-cyan via-cyber-gold to-cyber-magenta opacity-40" />
+                                  
+                                  {res.event_evolution.map((evt, idx) => (
+                                    <motion.div
+                                      key={idx}
+                                      initial={{ opacity: 0, x: -10 }}
+                                      animate={{ opacity: 1, x: 0 }}
+                                      transition={{ delay: 0.1 + idx * 0.1 }}
+                                      className="relative mb-3 last:mb-0"
+                                    >
+                                      <div className={`absolute -left-4 top-1 w-2.5 h-2.5 rounded-full border-2 ${
+                                        evt.status === 'stable' ? 'border-cyber-cyan bg-cyber-cyan/20'
+                                          : evt.status === 'active' ? 'border-cyber-gold bg-cyber-gold/20'
+                                          : evt.status === 'warning' ? 'border-amber-400 bg-amber-400/20'
+                                          : evt.status === 'volatile' ? 'border-cyber-magenta bg-cyber-magenta/20'
+                                          : evt.status === 'critical' ? 'border-cyber-crimson bg-cyber-crimson/20'
+                                          : evt.status === 'collapsed' ? 'border-red-600 bg-red-600/30'
+                                          : 'border-slate-500 bg-slate-500/20'
+                                      }`} />
+                                      
+                                      <div className="ml-2">
+                                        <div className="flex items-center space-x-2 mb-0.5">
+                                          <span className="text-[9px] font-bold text-cyber-cyan tracking-wider">{evt.timeframe}</span>
+                                          <ArrowRight className="w-2.5 h-2.5 text-slate-600" />
+                                          <span className={`text-[7px] font-bold uppercase tracking-widest px-1 py-0.5 rounded ${
+                                            evt.status === 'stable' ? 'bg-cyber-cyan/10 text-cyber-cyan'
+                                              : evt.status === 'active' ? 'bg-cyber-gold/10 text-cyber-gold'
+                                              : evt.status === 'warning' ? 'bg-amber-400/10 text-amber-400'
+                                              : evt.status === 'volatile' ? 'bg-cyber-magenta/10 text-cyber-magenta'
+                                              : evt.status === 'critical' ? 'bg-cyber-crimson/10 text-cyber-crimson'
+                                              : evt.status === 'collapsed' ? 'bg-red-600/10 text-red-500'
+                                              : 'bg-slate-600/10 text-slate-400'
+                                          }`}>
+                                            {evt.status}
+                                          </span>
+                                        </div>
+                                        <p className="text-[9.5px] text-slate-400 leading-relaxed font-sans">
+                                          {evt.state}
+                                        </p>
+                                      </div>
+                                    </motion.div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Risk Analysis */}
+                            {res.risk_analysis && (
+                              <div className="bg-obsidian-950/60 border border-obsidian-border/30 rounded p-3.5">
+                                <div className="flex items-center space-x-1.5 mb-2">
+                                  <AlertTriangle className="w-3 h-3 text-cyber-crimson" />
+                                  <span className="text-[8px] text-slate-500 uppercase tracking-widest font-bold">Risk Analysis</span>
+                                </div>
+                                <p className="text-[10px] text-slate-400 leading-relaxed font-sans">{res.risk_analysis}</p>
+                              </div>
+                            )}
+
+                            {/* Opportunity Analysis */}
+                            {res.opportunity_analysis && (
+                              <div className="bg-obsidian-950/60 border border-obsidian-border/30 rounded p-3.5">
+                                <div className="flex items-center space-x-1.5 mb-2">
+                                  <TrendingUp className="w-3 h-3 text-emerald-400" />
+                                  <span className="text-[8px] text-slate-500 uppercase tracking-widest font-bold">Opportunity Analysis</span>
+                                </div>
+                                <p className="text-[10px] text-slate-400 leading-relaxed font-sans">{res.opportunity_analysis}</p>
+                              </div>
+                            )}
+
+                            {/* Timeline Stability */}
+                            {res.timeline_stability && (
+                              <div className="bg-obsidian-950/60 border border-obsidian-border/30 rounded p-3.5">
+                                <div className="flex items-center space-x-1.5 mb-2">
+                                  <Shield className="w-3 h-3 text-cyber-gold" />
+                                  <span className="text-[8px] text-slate-500 uppercase tracking-widest font-bold">Timeline Stability</span>
+                                </div>
+                                <p className={`text-[10px] font-bold leading-relaxed ${
+                                  res.timeline_stability.startsWith('HIGH') ? 'text-cyber-cyan'
+                                    : res.timeline_stability.startsWith('MODERATE') ? 'text-cyber-gold'
+                                    : 'text-cyber-crimson'
+                                }`}>
+                                  {res.timeline_stability}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Divergence Reason */}
+                            {res.divergence_reason && (
+                              <div className="bg-obsidian-950/60 border border-obsidian-border/30 rounded p-3.5">
+                                <div className="flex items-center space-x-1.5 mb-2">
+                                  <Zap className="w-3 h-3 text-cyber-magenta" />
+                                  <span className="text-[8px] text-slate-500 uppercase tracking-widest font-bold">Divergence Reason</span>
+                                </div>
+                                <p className="text-[10px] text-slate-400 leading-relaxed font-sans">{res.divergence_reason}</p>
+                              </div>
+                            )}
+
+                            {/* Strategic Outlook */}
+                            {res.strategic_outlook && (
+                              <div className={`rounded p-3.5 border ${
+                                res.strategic_outlook.startsWith('RECOMMENDED') ? 'bg-cyber-cyan/5 border-cyber-cyan/25'
+                                  : res.strategic_outlook.startsWith('CONDITIONAL') ? 'bg-cyber-gold/5 border-cyber-gold/25'
+                                  : res.strategic_outlook.startsWith('NOT RECOMMENDED') ? 'bg-cyber-crimson/5 border-cyber-crimson/25'
+                                  : 'bg-obsidian-950/60 border-obsidian-border/30'
+                              }`}>
+                                <div className="flex items-center space-x-1.5 mb-2">
+                                  <CheckCircle className={`w-3 h-3 ${
+                                    res.strategic_outlook.startsWith('RECOMMENDED') ? 'text-cyber-cyan'
+                                      : res.strategic_outlook.startsWith('CONDITIONAL') ? 'text-cyber-gold'
+                                      : 'text-cyber-crimson'
+                                  }`} />
+                                  <span className="text-[8px] text-slate-500 uppercase tracking-widest font-bold">Strategic Recommendation</span>
+                                </div>
+                                <p className={`text-[10px] font-bold leading-relaxed ${
+                                  res.strategic_outlook.startsWith('RECOMMENDED') ? 'text-cyber-cyan'
+                                    : res.strategic_outlook.startsWith('CONDITIONAL') ? 'text-cyber-gold'
+                                    : res.strategic_outlook.startsWith('NOT RECOMMENDED') ? 'text-cyber-crimson'
+                                    : 'text-slate-300'
+                                }`}>
+                                  {res.strategic_outlook}
+                                </p>
+                              </div>
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   );
                 })

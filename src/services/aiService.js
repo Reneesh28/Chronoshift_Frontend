@@ -14,4 +14,9 @@ export const aiService = {
     const response = await flaskApi.get(`/ai/summary/${summaryId}`);
     return response.data;
   },
+
+  async getSummaryByBranch(branchId) {
+    const response = await flaskApi.get(`/ai/summary/branch/${branchId}`);
+    return response.data;
+  },
 };

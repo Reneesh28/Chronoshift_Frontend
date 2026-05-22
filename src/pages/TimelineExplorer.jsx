@@ -18,7 +18,14 @@ import {
   Grid,
   CheckCircle,
   HelpCircle,
-  Maximize2
+  Maximize2,
+  AlertTriangle,
+  TrendingUp,
+  Shield,
+  Target,
+  Clock,
+  Zap,
+  ArrowRight
 } from 'lucide-react';
 import TerminalLoader from '../components/TerminalLoader';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -43,9 +50,10 @@ export default function TimelineExplorer() {
   // Simulation Running State
   const [simulating, setSimulating] = useState(false);
 
-  // AI Narrative states
-  const [aiSummary, setAiSummary] = useState('');
+  // AI Narrative states — full structured report object
+  const [aiReport, setAiReport] = useState(null);
   const [generatingAi, setGeneratingAi] = useState(false);
+  const [fetchingReport, setFetchingReport] = useState(false);
 
   // Hover states for interactive tooltips
   const [hoveredNode, setHoveredNode] = useState(null);
@@ -144,8 +152,15 @@ export default function TimelineExplorer() {
         }
         return b;
       }));
+    } else if (payload.event === 'ai_summary_ready') {
+      addLog(`[WS AI] NARRATIVE REPORT READY FOR BRANCH "${payload.branch_id}"`);
+      // Auto-refresh the AI panel if the updated branch matches the selected one
+      const selId = selectedBranch?.id || selectedBranch?._id;
+      if (payload.branch_id === selId) {
+        fetchBranchReport(payload.branch_id);
+      }
     }
-  }, [timelineId]);
+  }, [timelineId, selectedBranch]);
 
   const { isConnected } = useWebSocket(timelineId, handleWebSocketMessage);
 
@@ -633,11 +648,37 @@ export default function TimelineExplorer() {
     }
   };
 
-  // Generate AI Summaries (Flask Service)
+  // Fetch pre-cached branch report from Flask AI Engine
+  const fetchBranchReport = async (branchId) => {
+    setFetchingReport(true);
+    try {
+      const report = await aiService.getSummaryByBranch(branchId);
+      setAiReport(report);
+      addLog(`[AI LOADED] CACHED REPORT FETCHED FOR BRANCH "${branchId}"`);
+    } catch (err) {
+      // No cached report available — silently ignore, user can manually compile
+      setAiReport(null);
+    } finally {
+      setFetchingReport(false);
+    }
+  };
+
+  // Auto-fetch AI report whenever the selected branch changes
+  useEffect(() => {
+    if (!selectedBranch) return;
+    const branchId = selectedBranch.id || selectedBranch._id;
+    if (!branchId || branchId === 'root') {
+      setAiReport(null);
+      return;
+    }
+    fetchBranchReport(branchId);
+  }, [selectedBranch?.id, selectedBranch?._id]);
+
+  // Generate AI Summaries (Flask Service) — manual fallback
   const handleGenerateSummary = async () => {
     if (!selectedBranch) return;
     setGeneratingAi(true);
-    setAiSummary('');
+    setAiReport(null);
     addLog('REQUESTING PARALLEL COGNITIVE SUMMARY: BOOTING COGNITIVE PHI-2 ENGINE...');
     try {
       const response = await aiService.generateSummary({
@@ -645,10 +686,10 @@ export default function TimelineExplorer() {
         branch_id: selectedBranch.id || selectedBranch._id || 'root',
         simulation_id: 'default'
       });
-      setAiSummary(response.summary || 'Cognitive co-flow summary successfully calculated.');
+      setAiReport(response);
       addLog('[ SUCCESS ] COGNITIVE REPORT READY: GRAPH PLOT INTEGRATED.');
     } catch (err) {
-      setAiSummary('Error resolving AI summarization node. Ensure Flask AI Engine is online on Port 8003.');
+      setAiReport({ summary: 'Error resolving AI summarization node. Ensure Flask AI Engine is online on Port 8003.' });
       addLog('[ FAILED ] COGNITIVE REPORT FAILED.');
     } finally {
       setGeneratingAi(false);
@@ -998,100 +1039,298 @@ export default function TimelineExplorer() {
         initial={{ x: 100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-obsidian-border bg-obsidian-900/10 flex flex-col justify-between shrink-0 overflow-y-auto scrollbar-thin"
+        className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l border-obsidian-border bg-obsidian-900/10 flex flex-col shrink-0 overflow-hidden"
       >
-        {/* AI Insight report */}
-        <div className="p-5 border-b border-obsidian-border flex-1 flex flex-col min-h-60 justify-between">
-          <div>
-            <div className="flex items-center space-x-2 text-cyber-magenta uppercase font-bold tracking-wider mb-3">
-              <Brain className="w-4 h-4" />
-              <span>AI Cognitive Summary</span>
+        {/* AI Insight Panel — Scrollable report area */}
+        <div className="flex-1 overflow-y-auto scrollbar-thin">
+          <div className="p-5 border-b border-obsidian-border">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2 text-cyber-magenta uppercase font-bold tracking-wider">
+                <Brain className="w-4 h-4" />
+                <span>Timeline Intelligence</span>
+              </div>
+              {aiReport && (
+                <span className={`px-1.5 py-0.5 rounded text-[7px] font-bold tracking-widest border ${
+                  aiReport.branch_type === 'stable_growth' ? 'bg-cyber-cyan/10 text-cyber-cyan border-cyber-cyan/30'
+                    : aiReport.branch_type === 'high_risk_growth' ? 'bg-cyber-gold/10 text-cyber-gold border-cyber-gold/30'
+                    : aiReport.branch_type === 'systemic_collapse' ? 'bg-cyber-crimson/10 text-cyber-crimson border-cyber-crimson/30'
+                    : 'bg-cyber-magenta/10 text-cyber-magenta border-cyber-magenta/30'
+                }`}>
+                  {aiReport.branch_type === 'stable_growth' ? 'STABLE'
+                    : aiReport.branch_type === 'high_risk_growth' ? 'HIGH RISK'
+                    : aiReport.branch_type === 'systemic_collapse' ? 'COLLAPSE'
+                    : 'REPORT'}
+                </span>
+              )}
             </div>
-            {aiSummary ? (
-              <div className="space-y-4 animate-fadeIn">
-                <div className="bg-obsidian-950/80 border border-cyber-magenta/25 rounded p-4 font-mono space-y-3.5 shadow-lg relative overflow-hidden">
-                  {/* Glowing matrix edge accent */}
-                  <div className="absolute inset-y-0 right-0 w-0.5 bg-cyber-magenta opacity-35 animate-[pulse_1.5s_infinite]" />
+
+            {(fetchingReport || generatingAi) ? (
+              <div className="text-slate-500 italic py-10 text-center border border-dashed border-obsidian-border rounded font-mono">
+                <div className="flex flex-col items-center justify-center space-y-2">
+                  <span className="animate-pulse text-cyber-magenta font-bold text-[10px]">
+                    {"// DECRYPTING TEMPORAL MATRIX..."}
+                  </span>
+                  <span className="text-[8px] uppercase tracking-widest text-slate-500 animate-pulse">
+                    {generatingAi ? 'Compiling Cognitive Engine...' : 'Loading Cached Report...'}
+                  </span>
+                </div>
+              </div>
+            ) : aiReport ? (
+              <div className="space-y-3 animate-fadeIn">
+                {/* Telemetry Grid */}
+                <div className="bg-obsidian-950/80 border border-cyber-magenta/20 rounded p-3.5 font-mono shadow-lg relative overflow-hidden">
+                  <div className="absolute inset-y-0 right-0 w-0.5 bg-cyber-magenta opacity-30 animate-[pulse_1.5s_infinite]" />
                   
-                  <div className="text-[9px] text-slate-500 uppercase tracking-widest font-bold border-b border-obsidian-border/40 pb-2 flex items-center justify-between">
-                    <span>COGNITIVE REPORT</span>
-                    <span className="text-[8px] bg-cyber-magenta/15 px-1 rounded text-cyber-magenta">SECURE V.12</span>
+                  <div className="text-[9px] text-slate-500 uppercase tracking-widest font-bold border-b border-obsidian-border/40 pb-2 mb-3 flex items-center justify-between">
+                    <span>ALTERNATE TIMELINE REPORT</span>
+                    <span className="text-[7px] bg-cyber-magenta/15 px-1.5 rounded text-cyber-magenta">SECURE V.14</span>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-3 text-[10px]">
                     <div>
                       <span className="text-slate-500 block text-[8px] uppercase tracking-wider">Target Branch</span>
-                      <span className="text-cyber-cyan font-bold uppercase truncate block mt-0.5">
+                      <span className="text-cyber-cyan font-bold uppercase truncate block mt-0.5 text-[9px]">
                         {selectedBranch?.branch_name || 'BASELINE ROOT'}
                       </span>
                     </div>
-                    
                     <div>
-                      <span className="text-slate-500 block text-[8px] uppercase tracking-wider">Matrix Divergence</span>
+                      <span className="text-slate-500 block text-[8px] uppercase tracking-wider">Divergence</span>
                       <span className={`font-bold block mt-0.5 ${
-                        (selectedBranch?.divergence_score || 0) > 0.6 ? 'text-cyber-magenta animate-pulse' : 'text-cyber-cyan'
+                        (selectedBranch?.divergence_score || 0) > 0.6 ? 'text-cyber-magenta' : 'text-cyber-cyan'
                       }`}>
                         {((selectedBranch?.divergence_score || 0) * 100).toFixed(0)}%
                       </span>
                     </div>
-                    
                     <div>
-                      <span className="text-slate-500 block text-[8px] uppercase tracking-wider">Risk Index</span>
-                      <span className="text-cyber-gold font-bold block mt-0.5">
-                        {selectedBranch?.depth_level === 1 ? '0.00' : (selectedBranch?.divergence_score * 0.85 || 0.12).toFixed(2)}
+                      <span className="text-slate-500 block text-[8px] uppercase tracking-wider">Risk Score</span>
+                      <span className={`font-bold block mt-0.5 ${
+                        (aiReport.risk_score || 0) > 0.6 ? 'text-cyber-crimson' : (aiReport.risk_score || 0) > 0.3 ? 'text-cyber-gold' : 'text-cyber-cyan'
+                      }`}>
+                        {(aiReport.risk_score || 0).toFixed(2)}
                       </span>
                     </div>
-                    
                     <div>
-                      <span className="text-slate-500 block text-[8px] uppercase tracking-wider">Confidence Level</span>
+                      <span className="text-slate-500 block text-[8px] uppercase tracking-wider">Confidence</span>
                       <span className="text-white font-bold block mt-0.5">
-                        {selectedBranch?.depth_level === 1 ? '1.00' : (0.95 - (selectedBranch?.divergence_score || 0.1) * 0.3).toFixed(2)}
+                        {((aiReport.confidence_score || 0) * 100).toFixed(0)}%
                       </span>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-obsidian-border/40 pt-3">
-                    <span className="text-slate-500 block text-[8px] uppercase tracking-widest mb-1.5 font-bold">
-                      COGNITIVE PROJECTION
-                    </span>
-                    <div className="text-[11px] text-slate-300 leading-relaxed font-sans max-h-48 overflow-y-auto scrollbar-thin bg-obsidian-900/40 p-2.5 rounded border border-obsidian-border/20">
-                      {aiSummary}
                     </div>
                   </div>
                 </div>
+
+                {/* Future Outlook */}
+                {aiReport.future_outlook && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="bg-obsidian-950/60 border border-obsidian-border/30 rounded p-3.5"
+                  >
+                    <div className="flex items-center space-x-1.5 mb-2">
+                      <Target className="w-3 h-3 text-cyber-cyan" />
+                      <span className="text-[8px] text-slate-500 uppercase tracking-widest font-bold">Future Outlook</span>
+                    </div>
+                    <p className="text-[10.5px] text-slate-300 leading-relaxed font-sans">
+                      {aiReport.future_outlook}
+                    </p>
+                  </motion.div>
+                )}
+
+                {/* Event Evolution Timeline */}
+                {aiReport.event_evolution && aiReport.event_evolution.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="bg-obsidian-950/60 border border-obsidian-border/30 rounded p-3.5"
+                  >
+                    <div className="flex items-center space-x-1.5 mb-3">
+                      <Clock className="w-3 h-3 text-cyber-gold" />
+                      <span className="text-[8px] text-slate-500 uppercase tracking-widest font-bold">Event Evolution</span>
+                    </div>
+                    <div className="relative pl-4">
+                      {/* Vertical timeline line */}
+                      <div className="absolute left-[5px] top-1 bottom-1 w-px bg-gradient-to-b from-cyber-cyan via-cyber-gold to-cyber-magenta opacity-40" />
+                      
+                      {aiReport.event_evolution.map((evt, idx) => (
+                        <motion.div
+                          key={idx}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.3 + idx * 0.12 }}
+                          className="relative mb-3 last:mb-0"
+                        >
+                          {/* Timeline dot */}
+                          <div className={`absolute -left-4 top-1 w-2.5 h-2.5 rounded-full border-2 ${
+                            evt.status === 'stable' ? 'border-cyber-cyan bg-cyber-cyan/20'
+                              : evt.status === 'active' ? 'border-cyber-gold bg-cyber-gold/20'
+                              : evt.status === 'warning' ? 'border-amber-400 bg-amber-400/20'
+                              : evt.status === 'volatile' ? 'border-cyber-magenta bg-cyber-magenta/20'
+                              : evt.status === 'critical' ? 'border-cyber-crimson bg-cyber-crimson/20'
+                              : evt.status === 'collapsed' ? 'border-red-600 bg-red-600/30'
+                              : 'border-slate-500 bg-slate-500/20'
+                          }`} />
+                          
+                          <div className="ml-2">
+                            <div className="flex items-center space-x-2 mb-0.5">
+                              <span className="text-[9px] font-bold text-cyber-cyan tracking-wider">{evt.timeframe}</span>
+                              <ArrowRight className="w-2.5 h-2.5 text-slate-600" />
+                              <span className={`text-[7px] font-bold uppercase tracking-widest px-1 py-0.5 rounded ${
+                                evt.status === 'stable' ? 'bg-cyber-cyan/10 text-cyber-cyan'
+                                  : evt.status === 'active' ? 'bg-cyber-gold/10 text-cyber-gold'
+                                  : evt.status === 'warning' ? 'bg-amber-400/10 text-amber-400'
+                                  : evt.status === 'volatile' ? 'bg-cyber-magenta/10 text-cyber-magenta'
+                                  : evt.status === 'critical' ? 'bg-cyber-crimson/10 text-cyber-crimson'
+                                  : evt.status === 'collapsed' ? 'bg-red-600/10 text-red-500'
+                                  : 'bg-slate-600/10 text-slate-400'
+                              }`}>
+                                {evt.status}
+                              </span>
+                            </div>
+                            <p className="text-[9.5px] text-slate-400 leading-relaxed font-sans">
+                              {evt.state}
+                            </p>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Risk Analysis */}
+                {aiReport.risk_analysis && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.35 }}
+                    className="bg-obsidian-950/60 border border-obsidian-border/30 rounded p-3.5"
+                  >
+                    <div className="flex items-center space-x-1.5 mb-2">
+                      <AlertTriangle className="w-3 h-3 text-cyber-crimson" />
+                      <span className="text-[8px] text-slate-500 uppercase tracking-widest font-bold">Risk Analysis</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 leading-relaxed font-sans">
+                      {aiReport.risk_analysis}
+                    </p>
+                  </motion.div>
+                )}
+
+                {/* Opportunity Analysis */}
+                {aiReport.opportunity_analysis && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="bg-obsidian-950/60 border border-obsidian-border/30 rounded p-3.5"
+                  >
+                    <div className="flex items-center space-x-1.5 mb-2">
+                      <TrendingUp className="w-3 h-3 text-emerald-400" />
+                      <span className="text-[8px] text-slate-500 uppercase tracking-widest font-bold">Opportunity Analysis</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 leading-relaxed font-sans">
+                      {aiReport.opportunity_analysis}
+                    </p>
+                  </motion.div>
+                )}
+
+                {/* Timeline Stability */}
+                {aiReport.timeline_stability && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.45 }}
+                    className="bg-obsidian-950/60 border border-obsidian-border/30 rounded p-3.5"
+                  >
+                    <div className="flex items-center space-x-1.5 mb-2">
+                      <Shield className="w-3 h-3 text-cyber-gold" />
+                      <span className="text-[8px] text-slate-500 uppercase tracking-widest font-bold">Timeline Stability</span>
+                    </div>
+                    <p className={`text-[10px] font-bold leading-relaxed ${
+                      aiReport.timeline_stability.startsWith('HIGH') ? 'text-cyber-cyan'
+                        : aiReport.timeline_stability.startsWith('MODERATE') ? 'text-cyber-gold'
+                        : 'text-cyber-crimson'
+                    }`}>
+                      {aiReport.timeline_stability}
+                    </p>
+                  </motion.div>
+                )}
+
+                {/* Divergence Reason */}
+                {aiReport.divergence_reason && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                    className="bg-obsidian-950/60 border border-obsidian-border/30 rounded p-3.5"
+                  >
+                    <div className="flex items-center space-x-1.5 mb-2">
+                      <Zap className="w-3 h-3 text-cyber-magenta" />
+                      <span className="text-[8px] text-slate-500 uppercase tracking-widest font-bold">Divergence Reason</span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 leading-relaxed font-sans">
+                      {aiReport.divergence_reason}
+                    </p>
+                  </motion.div>
+                )}
+
+                {/* Strategic Outlook */}
+                {aiReport.strategic_outlook && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.55 }}
+                    className={`rounded p-3.5 border ${
+                      aiReport.strategic_outlook.startsWith('RECOMMENDED') ? 'bg-cyber-cyan/5 border-cyber-cyan/25'
+                        : aiReport.strategic_outlook.startsWith('CONDITIONAL') ? 'bg-cyber-gold/5 border-cyber-gold/25'
+                        : aiReport.strategic_outlook.startsWith('NOT RECOMMENDED') ? 'bg-cyber-crimson/5 border-cyber-crimson/25'
+                        : 'bg-obsidian-950/60 border-obsidian-border/30'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-1.5 mb-2">
+                      <CheckCircle className={`w-3 h-3 ${
+                        aiReport.strategic_outlook.startsWith('RECOMMENDED') ? 'text-cyber-cyan'
+                          : aiReport.strategic_outlook.startsWith('CONDITIONAL') ? 'text-cyber-gold'
+                          : 'text-cyber-crimson'
+                      }`} />
+                      <span className="text-[8px] text-slate-500 uppercase tracking-widest font-bold">Strategic Recommendation</span>
+                    </div>
+                    <p className={`text-[10px] font-bold leading-relaxed ${
+                      aiReport.strategic_outlook.startsWith('RECOMMENDED') ? 'text-cyber-cyan'
+                        : aiReport.strategic_outlook.startsWith('CONDITIONAL') ? 'text-cyber-gold'
+                        : aiReport.strategic_outlook.startsWith('NOT RECOMMENDED') ? 'text-cyber-crimson'
+                        : 'text-slate-300'
+                    }`}>
+                      {aiReport.strategic_outlook}
+                    </p>
+                  </motion.div>
+                )}
               </div>
             ) : (
-              <div className="text-slate-500 italic py-8 text-center border border-dashed border-obsidian-border rounded font-mono">
-                {generatingAi ? (
-                  <div className="flex flex-col items-center justify-center space-y-2">
-                    <span className="animate-pulse text-cyber-magenta font-bold text-[10px]">
-                      {"// DECRYPTER SCANNING MATRIX..."}
-                    </span>
-                    <span className="text-[8px] uppercase tracking-widest text-slate-500 animate-pulse">
-                      Booting Cognitive Engine...
-                    </span>
-                  </div>
-                ) : (
-                  'Awaiting cognitive summary request.'
-                )}
+              <div className="text-slate-500 italic py-10 text-center border border-dashed border-obsidian-border rounded font-mono">
+                <div className="flex flex-col items-center space-y-1.5">
+                  <Brain className="w-5 h-5 text-slate-600 mb-1" />
+                  <span className="text-[10px]">Select a branch node to view intelligence report.</span>
+                  <span className="text-[8px] text-slate-600">Or manually compile using the button below.</span>
+                </div>
               </div>
             )}
           </div>
 
-          <div className="pt-4">
+          {/* Manual compile button */}
+          <div className="p-5 border-b border-obsidian-border">
             <button
               onClick={handleGenerateSummary}
               disabled={generatingAi || !selectedBranch}
-              className="w-full py-2 bg-cyber-magenta/10 border border-cyber-magenta text-cyber-magenta hover:bg-cyber-magenta hover:text-obsidian-950 font-bold uppercase rounded transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
+              className="w-full py-2 bg-cyber-magenta/10 border border-cyber-magenta text-cyber-magenta hover:bg-cyber-magenta hover:text-obsidian-950 font-bold uppercase rounded transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50 text-[10px]"
             >
-              <Brain className="w-3.5 h-3.5 animate-pulse" />
+              <Brain className="w-3.5 h-3.5" />
               <span>{generatingAi ? 'ANALYZING MATRIX...' : 'COMPILE COGNITIVE INSIGHT'}</span>
             </button>
           </div>
         </div>
 
         {/* Real-time Telemetry Logs Box */}
-        <div className="p-5 h-48 border-t border-obsidian-border bg-obsidian-950/60 flex flex-col justify-between">
+        <div className="p-5 h-48 border-t border-obsidian-border bg-obsidian-950/60 flex flex-col justify-between shrink-0">
           <div className="flex items-center justify-between text-slate-500 uppercase tracking-widest font-bold mb-2">
             <span className="flex items-center space-x-1.5">
               <Terminal className="w-3.5 h-3.5" />
