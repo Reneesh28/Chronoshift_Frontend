@@ -1,117 +1,245 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 @import "tailwindcss";
 
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+@theme {
+  /* Quant-Grade Sci-Fi Control Room Theme Settings */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-display: "Outfit", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  /* Custom Color Tokens - Professional Dark Palette */
+  --color-obsidian-950: #030712;
+  --color-obsidian-900: #0B0F19;
+  --color-obsidian-800: #111827;
+  --color-obsidian-700: #1F2937;
+  --color-obsidian-border: #374151;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  /* Neon Glow Accent Colors */
+  --color-cyber-cyan: #06B6D4;
+  --color-cyber-cyan-glow: rgba(6, 182, 212, 0.15);
+  --color-cyber-gold: #F59E0B;
+  --color-cyber-gold-glow: rgba(245, 158, 11, 0.15);
+  --color-cyber-magenta: #D946EF;
+  --color-cyber-magenta-glow: rgba(217, 70, 239, 0.15);
+  --color-cyber-crimson: #EF4444;
+  --color-cyber-crimson-glow: rgba(239, 68, 68, 0.15);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+/* Custom Scrollbar Styles for Terminal Dashboard */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
+::-webkit-scrollbar-track {
+  background: var(--color-obsidian-950);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-obsidian-700);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-cyber-cyan);
+}
+
+/* Base Body Style Override */
 body {
   margin: 0;
+  padding: 0;
+  font-family: var(--font-sans);
+  background-color: var(--color-obsidian-950);
+  color: #E5E7EB;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
+/* Premium Sci-Fi Card Glassmorphism and Custom Border Glows */
+.hud-glass-panel {
+  background: rgba(11, 15, 25, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.30s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hud-glass-panel:hover {
+  border-color: rgba(6, 182, 212, 0.25);
+  box-shadow: 0 8px 32px 0 rgba(6, 182, 212, 0.05);
+}
+
+.hud-glass-panel-gold {
+  background: rgba(11, 15, 25, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.30s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hud-glass-panel-gold:hover {
+  border-color: rgba(245, 158, 11, 0.40);
+  box-shadow: 0 8px 32px 0 rgba(245, 158, 11, 0.08);
+}
+
+.hud-glass-panel-magenta {
+  background: rgba(11, 15, 25, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(217, 70, 239, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: all 0.30s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hud-glass-panel-magenta:hover {
+  border-color: rgba(217, 70, 239, 0.40);
+  box-shadow: 0 8px 32px 0 rgba(217, 70, 239, 0.08);
+}
+
+/* Ambient Electric Glow for Main Layout Anchors */
+.neon-glow-cyan {
+  text-shadow: 0 0 10px rgba(6, 182, 212, 0.6);
+}
+
+.neon-glow-magenta {
+  text-shadow: 0 0 10px rgba(217, 70, 239, 0.6);
+}
+
+/* Linear scanning line effect inside panels for tech twins */
+.panel-grid-overlay {
+  background-size: 20px 20px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}
+
+/* Fully custom grid-reset for React Root container */
 #root {
-  width: 1126px;
+  width: 100vw;
   max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  border: none;
+  min-height: 100vh;
   box-sizing: border-box;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+/* Subtle animation pulses for glowing nodes */
+@keyframes neonPulse {
+  0%, 100% {
+    opacity: 0.6;
+    box-shadow: 0 0 4px rgba(6, 182, 212, 0.3);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 12px rgba(6, 182, 212, 0.8);
   }
 }
 
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
+.pulse-node-cyan {
+  animation: neonPulse 2s infinite ease-in-out;
+}
 
-  @media (max-width: 1024px) {
-    font-size: 20px;
+/* D3.js Timeline Graph Engine Style Tokens */
+.timeline-link {
+  transition: stroke 0.3s, stroke-width 0.3s, stroke-opacity 0.3s;
+}
+
+@keyframes linkFlow {
+  from {
+    stroke-dashoffset: 20;
+  }
+  to {
+    stroke-dashoffset: 0;
   }
 }
 
-p {
-  margin: 0;
+.timeline-link.animate-flow {
+  stroke-dasharray: 6, 4;
+  animation: linkFlow 1.2s infinite linear;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+.node-group {
+  transition: transform 0.1s ease-out;
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+.node-group:hover .node-circle {
+  stroke-width: 3.5px;
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+.node-group:hover .node-label {
+  fill: #06B6D4;
+  font-weight: 600;
+  text-shadow: 0 0 5px rgba(6, 182, 212, 0.4);
+}
+
+.node-circle {
+  transition: stroke-width 0.2s, r 0.2s, filter 0.2s;
+}
+
+.selected-halo {
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.hud-control-btn {
+  background: rgba(11, 15, 25, 0.7);
+  border: 1px solid var(--color-obsidian-border);
+  color: #9CA3AF;
+  transition: all 0.2s ease-in-out;
+}
+
+.hud-control-btn:hover {
+  background: rgba(6, 182, 212, 0.1);
+  border-color: var(--color-cyber-cyan);
+  color: #FFFFFF;
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.25);
+}
+
+/* scanline scan sweeping effect */
+@keyframes scanlineMove {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+.scanline-effect {
+  background: linear-gradient(
+    to bottom,
+    transparent 49%,
+    rgba(6, 182, 212, 0.08) 50%,
+    rgba(6, 182, 212, 0.15) 50.5%,
+    rgba(6, 182, 212, 0.08) 51%,
+    transparent 52%
+  );
+  background-size: 100% 12px;
+  animation: scanlineMove 8s linear infinite;
+}
+
+@keyframes progressMove {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: 200px 0;
+  }
+}
+
+.progress-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(245, 158, 11, 0.25) 25%,
+    rgba(245, 158, 11, 0.75) 50%,
+    rgba(245, 158, 11, 0.25) 75%
+  );
+  background-size: 200px 100%;
+  animation: progressMove 1.5s infinite linear;
 }
