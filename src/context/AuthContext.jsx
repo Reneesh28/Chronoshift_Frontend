@@ -8,6 +8,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+
   // Attempt dynamic session restoration on cold boot
   useEffect(() => {
     async function restoreSession() {
