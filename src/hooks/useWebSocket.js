@@ -21,7 +21,7 @@ export function useWebSocket(timelineId, onMessageCallback) {
     }
 
     const baseApiUrl = import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8000';
-    const wsBaseUrl = baseApiUrl.replace(/^http/, 'ws');
+    const wsBaseUrl = import.meta.env.VITE_WS_URL || baseApiUrl.replace(/^http/, 'ws');
     const wsUrl = `${wsBaseUrl}/ws/timeline/${timelineId}`;
     console.log(`[WebSocket] Connecting to ${wsUrl}...`);
     

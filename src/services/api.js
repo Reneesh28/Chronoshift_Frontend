@@ -15,8 +15,16 @@ export const setAccessToken = (token) => {
 // API BASE URL CONFIGURATIONS WITH ENV FALLBACKS
 // --------------------------------------------------
 export const DJANGO_BASE_URL = import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8000';
-export const FASTAPI_BASE_URL = import.meta.env.VITE_FASTAPI_URL || 'http://127.0.0.1:8002';
-export const FLASK_BASE_URL = import.meta.env.VITE_AI_ENGINE_URL || 'http://127.0.0.1:8003';
+
+const rawFastapiUrl = import.meta.env.VITE_FASTAPI_URL || 'http://127.0.0.1:8002';
+export const FASTAPI_BASE_URL = (rawFastapiUrl.includes('onrender.com') && !rawFastapiUrl.includes('/api/simulator'))
+  ? `${rawFastapiUrl.replace(/\/+$/, '')}/api/simulator`
+  : rawFastapiUrl;
+
+const rawFlaskUrl = import.meta.env.VITE_AI_ENGINE_URL || 'http://127.0.0.1:8003';
+export const FLASK_BASE_URL = (rawFlaskUrl.includes('onrender.com') && !rawFlaskUrl.includes('/api/ai'))
+  ? `${rawFlaskUrl.replace(/\/+$/, '')}/api/ai`
+  : rawFlaskUrl;
 
 // --------------------------------------------------
 // AXIOS INSTANCES SETUP
